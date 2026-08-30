@@ -1,0 +1,56 @@
+name: Fetch AFL ESPN data
+
+on:
+  schedule:
+    # 04:30 UTC jeden Dienstag = 30 Min. bevor die Claude-Automatisierung
+    # um 05:00 UTC (07:00 Schweizer Sommerzeit) läuft.
+    - cron: "30 4 * * 2"
+  workflow_dispatch: {}   # erlaubt manuelles Auslösen über den "Run workflow"-Button
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v4
+
+      - name: ESPN-Liga-Daten abrufen
+        env:
+          ESPN_SWID: ${{ secrets.ESPN_SWID }}
+          ESPN_S2: ${{ secrets.ESPN_S2 }}
+          LEAGUE_ID: "1043105107"
+          SEASON: "2026"
+        run: |
+          set -e
+          mkdir -p data
+          COOKIE="SWID=${ESPN_SWID}; espn_s2=${ESPN_S2}"
+
+          # Team-, Roster-, Matchup- und Settings-Daten in einem Aufruf
+          curl -sS -H "Cookie: ${COOKIE}" \
+            "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${SEASON}/segments/0/leagues/${LEAGUE_ID}?view=mTeam&view=mRoster&view=mMatchupScore&view=mMatchup&view=mSettings&view=mSchedule&view=mStandings" \
+            -o data/league.json
+
+          # Draft-Picks separat (eigener View)
+          curl -sS -H "Cookie: ${COOKIE}" \
+            "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${SEASON}/segments/0/leagues/${LEAGUE_ID}?view=mDraftDetail" \
+            -o data/draft.json
+
+          echo "Abgerufen: $(date -u +%Y-%m-%dT%H:%M:%SZ)" > data/last_fetch.txt
+
+      - name: Ergebnis prüfen
+        run: |
+          # Bricht den Lauf ab (und committet nichts), falls ESPN z.B. nur eine
+          # Fehlerseite statt echtem JSON zurückgegeben hat (abgelaufene Cookies etc.)
+          python3 -c "import json; json.load(open('data/league.json'))"
+          python3 -c "import json; json.load(open('data/draft.json'))"
+
+      - name: Änderungen committen
+        run: |
+          git config user.name "espn-relay-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet && echo "Keine Änderungen." || git commit -m "Update ESPN-Daten $(date -u +%Y-%m-%d)"
+          git push
