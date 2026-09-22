@@ -5,6 +5,7 @@ on:
     # 04:30 UTC jeden Dienstag = 30 Min. bevor die Claude-Automatisierung
     # um 05:00 UTC (07:00 Schweizer Sommerzeit) läuft.
     - cron: "30 4 * * 2"
+    - cron: "0 5 * * 4"
   workflow_dispatch: {}   # erlaubt manuelles Auslösen über den "Run workflow"-Button
 
 permissions:
