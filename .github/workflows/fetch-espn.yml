@@ -2,10 +2,12 @@ name: Fetch AFL ESPN data
 
 on:
   schedule:
-    # 04:30 UTC jeden Dienstag = 30 Min. bevor die Claude-Automatisierung
-    # um 05:00 UTC (07:00 Schweizer Sommerzeit) läuft.
-    - cron: "30 4 * * 2"
-    - cron: "0 5 * * 4"
+    # Immer VOR der Claude-Automatisierung. Die läuft im Sommer um 05:00 UTC
+    # (07:00/08:00 Schweizer Zeit), im Winter um 06:00 bzw. 07:00 UTC.
+    # 04:30 UTC liegt in beiden Fällen davor; GitHub Actions kann sich um
+    # 5-15 Minuten verspäten, darum nicht knapper planen.
+    - cron: "30 4 * * 2"   # Dienstag, für das Weekend Review
+    - cron: "30 4 * * 4"   # Donnerstag, für die Preview
   workflow_dispatch: {}   # erlaubt manuelles Auslösen über den "Run workflow"-Button
 
 permissions:
