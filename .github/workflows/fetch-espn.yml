@@ -2,6 +2,9 @@ name: Fetch AFL ESPN data
 
 on:
   schedule:
+    # Extra refresh before both Codex editorial runs; UTC pair covers Swiss DST.
+    - cron: "25 4 * * 2,4"
+    - cron: "25 5 * * 2,4"
     # Immer VOR der Claude-Automatisierung. Die läuft im Sommer um 05:00 UTC
     # (07:00/08:00 Schweizer Zeit), im Winter um 06:00 bzw. 07:00 UTC.
     # 04:30 UTC liegt in beiden Fällen davor; GitHub Actions kann sich um
@@ -32,12 +35,12 @@ jobs:
           COOKIE="SWID=${ESPN_SWID}; espn_s2=${ESPN_S2}"
 
           # Team-, Roster-, Matchup- und Settings-Daten in einem Aufruf
-          curl -sS -H "Cookie: ${COOKIE}" \
+          curl --fail --retry 2 --max-time 90 -sS -H "Cookie: ${COOKIE}" \
             "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${SEASON}/segments/0/leagues/${LEAGUE_ID}?view=mTeam&view=mRoster&view=mMatchupScore&view=mMatchup&view=mSettings&view=mSchedule&view=mStandings" \
             -o data/league.json
 
           # Draft-Picks separat (eigener View)
-          curl -sS -H "Cookie: ${COOKIE}" \
+          curl --fail --retry 2 --max-time 90 -sS -H "Cookie: ${COOKIE}" \
             "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${SEASON}/segments/0/leagues/${LEAGUE_ID}?view=mDraftDetail" \
             -o data/draft.json
 
